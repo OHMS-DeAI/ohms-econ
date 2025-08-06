@@ -1,0 +1,118 @@
+type JobPriority = variant {
+  Low;
+  Normal;
+  High;
+  Critical;
+};
+
+type JobSpec = record {
+  job_id : text;
+  model_id : text;
+  estimated_tokens : nat32;
+  estimated_compute_cycles : nat64;
+  priority : JobPriority;
+};
+
+type CostQuote = record {
+  job_id : text;
+  estimated_cost : nat64;
+  base_cost : nat64;
+  priority_multiplier : float32;
+  protocol_fee : nat64;
+  quote_expires_at : nat64;
+  quote_id : text;
+};
+
+type EscrowStatus = variant {
+  Pending;
+  Active;
+  Released;
+  Refunded;
+  Expired;
+};
+
+type EscrowAccount = record {
+  escrow_id : text;
+  job_id : text;
+  principal_id : text;
+  amount : nat64;
+  status : EscrowStatus;
+  created_at : nat64;
+  expires_at : nat64;
+};
+
+type SettlementStatus = variant {
+  Pending;
+  Completed;
+  Failed;
+  Disputed;
+};
+
+type FeesBreakdown = record {
+  base_amount : nat64;
+  protocol_fee : nat64;
+  agent_fee : nat64;
+  total_amount : nat64;
+};
+
+type Receipt = record {
+  receipt_id : text;
+  job_id : text;
+  escrow_id : text;
+  agent_id : text;
+  actual_cost : nat64;
+  fees_breakdown : FeesBreakdown;
+  settlement_status : SettlementStatus;
+  created_at : nat64;
+  settled_at : opt nat64;
+};
+
+type Balance = record {
+  principal_id : text;
+  available_balance : nat64;
+  escrowed_balance : nat64;
+  total_earnings : nat64;
+  last_updated : nat64;
+};
+
+type FeePolicy = record {
+  protocol_fee_percentage : float32;
+  agent_fee_percentage : float32;
+  minimum_fee : nat64;
+  priority_multipliers : vec record { text; float32 };
+  last_updated : nat64;
+};
+
+type EconHealth = record {
+  total_escrows : nat32;
+  active_escrows : nat32;
+  total_receipts : nat32;
+  pending_settlements : nat32;
+  total_volume : nat64;
+  protocol_fees_collected : nat64;
+  average_job_cost : float64;
+};
+
+type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok : CostQuote; Err : text };
+type Result_2 = variant { Ok : Balance; Err : text };
+type Result_3 = variant { Ok : EscrowAccount; Err : text };
+type Result_4 = variant { Ok : Receipt; Err : text };
+type Result_5 = variant { Ok : vec Receipt; Err : text };
+type Result_6 = variant { Ok; Err : text };
+
+service : {
+  deposit : (nat64) -> (Result_6);
+  escrow : (text, nat64) -> (Result);
+  estimate : (JobSpec) -> (Result_1) query;
+  get_balance : (opt text) -> (Result_2) query;
+  get_escrow : (text) -> (Result_3) query;
+  get_receipt : (text) -> (Result_4) query;
+  health : () -> (EconHealth) query;
+  list_receipts : (opt text, opt nat32) -> (Result_5) query;
+  policy : () -> (FeePolicy) query;
+  refund_escrow : (text) -> (Result_6);
+  settle : (Receipt) -> (Result);
+  update_policy : (FeePolicy) -> (Result_6);
+  withdraw : (nat64) -> (Result_6);
+}

@@ -1,19 +1,21 @@
 {
   "canisters": {
-    "ohms-econ-backend": {
-      "candid": "src/ohms-econ-backend/ohms-econ-backend.did",
-      "package": "ohms-econ-backend",
-      "type": "rust"
+    "ohms_econ": {
+      "type": "rust",
+      "candid": "src/ohms_econ.did",
+      "package": "ohms_econ"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
     },
-    "ohms-econ-frontend": {
-      "dependencies": [
-        "ohms-econ-backend"
+    "ic": {
+      "providers": [
+        "https://ic0.app"
       ],
-      "source": [
-        "src/ohms-econ-frontend/dist"
-      ],
-      "type": "assets",
-      "workspace": "ohms-econ-frontend"
+      "type": "persistent"
     }
   },
   "defaults": {
