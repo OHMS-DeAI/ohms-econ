@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "ohms-econ-backend": {
+      "candid": "src/ohms-econ-backend/ohms-econ-backend.did",
+      "package": "ohms-econ-backend",
+      "type": "rust"
+    },
+    "ohms-econ-frontend": {
+      "dependencies": [
+        "ohms-econ-backend"
+      ],
+      "source": [
+        "src/ohms-econ-frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "ohms-econ-frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
