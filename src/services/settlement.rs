@@ -41,8 +41,10 @@ impl SettlementService {
         let receipt_cost = receipt.actual_cost;
         let protocol_fee = receipt.fees_breakdown.protocol_fee;
         
+        let receipt_id_clone = receipt.receipt_id.clone();
         with_state_mut(|state| {
-            state.receipts.insert(receipt.receipt_id.clone(), receipt);
+            state.receipts.insert(receipt_id_clone.clone(), receipt);
+            state.receipt_to_settlement.insert(receipt_id_clone, settlement_id.clone());
             state.settlements.insert(settlement_id.clone(), settlement_entry);
             
             // Update metrics
@@ -94,7 +96,8 @@ impl SettlementService {
     pub fn verify_settlement_integrity(receipt_id: &str) -> Result<bool, String> {
         with_state(|state| {
             if let Some(receipt) = state.receipts.get(receipt_id) {
-                if let Some(settlement) = state.settlements.get(receipt_id) {
+                if let Some(settlement_id) = state.receipt_to_settlement.get(receipt_id) {
+                    if let Some(settlement) = state.settlements.get(settlement_id) {
                     // Verify amounts match
                     let amounts_match = receipt.actual_cost == settlement.amount;
                     
@@ -105,9 +108,12 @@ impl SettlementService {
                         (SettlementStatus::Failed, SettlementStatus::Failed)
                     );
                     
-                    Ok(amounts_match && status_consistent)
+                        Ok(amounts_match && status_consistent)
+                    } else {
+                        Err("Settlement record not found".to_string())
+                    }
                 } else {
-                    Err("Settlement record not found".to_string())
+                    Err("Receipt not found".to_string())
                 }
             } else {
                 Err("Receipt not found".to_string())

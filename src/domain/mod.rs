@@ -126,7 +126,7 @@ pub struct EconHealth {
     pub average_job_cost: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct SettlementEntry {
     pub receipt_id: String,
     pub processed_at: u64,

@@ -1,6 +1,7 @@
 use ic_cdk::api::caller;
 use candid::Principal;
 use crate::domain::*;
+use crate::services::{is_admin};
 
 pub struct Guards;
 
@@ -15,8 +16,9 @@ impl Guards {
     
     pub fn require_admin() -> Result<(), String> {
         Self::require_caller_authenticated()?;
-        // TODO: Implement proper admin check
-        Ok(())
+        let principal = caller();
+        let text = principal.to_text();
+        if is_admin(&text) { Ok(()) } else { Err("Admin required".to_string()) }
     }
     
     pub fn validate_amount(amount: u64) -> Result<(), String> {

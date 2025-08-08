@@ -1,6 +1,6 @@
 use crate::domain::*;
 use crate::services::{with_state, with_state_mut, BalanceService};
-use ic_cdk::api::time;
+use ic_cdk::api::{time, caller};
 use sha2::{Sha256, Digest};
 use base64::{Engine as _, engine::general_purpose};
 
@@ -12,7 +12,7 @@ impl EscrowService {
     pub async fn create_escrow(job_id: String, amount: u64) -> Result<String, String> {
         let now = time();
         let escrow_id = Self::generate_escrow_id(&job_id);
-        let principal_id = "caller".to_string(); // TODO: Get actual caller
+        let principal_id = caller().to_text();
         
         // Check if user has sufficient balance
         let balance = BalanceService::get_balance(&principal_id)?;

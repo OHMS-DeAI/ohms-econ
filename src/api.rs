@@ -1,4 +1,6 @@
 use ic_cdk_macros::*;
+use candid::Principal;
+use ic_cdk::api::caller;
 use crate::domain::*;
 use crate::services::{EstimationService, EscrowService, SettlementService, BalanceService};
 use crate::infra::{Guards, Metrics};
@@ -15,7 +17,7 @@ fn estimate(job_spec: JobSpec) -> Result<CostQuote, String> {
 async fn escrow(job_id: String, amount: u64) -> Result<String, String> {
     Guards::require_caller_authenticated()?;
     Guards::validate_amount(amount)?;
-    
+
     let escrow_id = EscrowService::create_escrow(job_id, amount).await?;
     Metrics::increment_counter("escrows_created_total");
     Ok(escrow_id)
@@ -25,7 +27,7 @@ async fn escrow(job_id: String, amount: u64) -> Result<String, String> {
 async fn settle(receipt: Receipt) -> Result<String, String> {
     Guards::require_caller_authenticated()?;
     Guards::validate_receipt(&receipt)?;
-    
+
     let settlement_id = SettlementService::settle_payment(receipt).await?;
     Metrics::increment_counter("settlements_processed_total");
     Ok(settlement_id)
@@ -34,8 +36,8 @@ async fn settle(receipt: Receipt) -> Result<String, String> {
 #[query]
 fn get_balance(principal_id: Option<String>) -> Result<Balance, String> {
     Guards::require_caller_authenticated()?;
-    let caller_principal = principal_id.unwrap_or_else(|| "caller".to_string());
-    BalanceService::get_balance(&caller_principal)
+    let pid = principal_id.unwrap_or_else(|| caller().to_text());
+    BalanceService::get_balance(&pid)
 }
 
 #[query]
@@ -64,9 +66,9 @@ fn get_receipt(receipt_id: String) -> Result<Receipt, String> {
 #[query]
 fn list_receipts(principal_id: Option<String>, limit: Option<u32>) -> Result<Vec<Receipt>, String> {
     Guards::require_caller_authenticated()?;
-    let caller_principal = principal_id.unwrap_or_else(|| "caller".to_string());
+    let pid = principal_id.unwrap_or_else(|| caller().to_text());
     let max_limit = limit.unwrap_or(20).min(100);
-    Ok(SettlementService::list_receipts(&caller_principal, max_limit))
+    Ok(SettlementService::list_receipts(&pid, max_limit))
 }
 
 #[query]
@@ -84,12 +86,12 @@ fn refund_escrow(escrow_id: String) -> Result<(), String> {
 fn deposit(amount: u64) -> Result<(), String> {
     Guards::require_caller_authenticated()?;
     Guards::validate_amount(amount)?;
-    BalanceService::deposit("caller".to_string(), amount)
+    BalanceService::deposit(caller().to_text(), amount)
 }
 
 #[update]
 fn withdraw(amount: u64) -> Result<(), String> {
     Guards::require_caller_authenticated()?;
     Guards::validate_amount(amount)?;
-    BalanceService::withdraw("caller".to_string(), amount)
+    BalanceService::withdraw(caller().to_text(), amount)
 }
