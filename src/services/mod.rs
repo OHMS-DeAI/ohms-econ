@@ -33,6 +33,8 @@ pub struct EconState {
     pub admins: Vec<String>,
     // Versioning for future stable state migrations
     pub state_version: u32,
+    // Subscription map
+    pub subscriptions: HashMap<String, Subscription>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, CandidType)]
@@ -76,4 +78,11 @@ pub fn add_admin(principal_text: String) {
 
 pub fn list_admins() -> Vec<String> {
     with_state(|state| state.admins.clone())
+}
+
+pub fn remove_admin(principal_text: String) {
+    with_state_mut(|state| {
+        state.admins.retain(|p| p != &principal_text);
+        state.metrics.last_activity = time();
+    });
 }

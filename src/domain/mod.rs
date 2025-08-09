@@ -134,3 +134,20 @@ pub struct SettlementEntry {
     pub status: SettlementStatus,
     pub idempotency_key: String,
 }
+
+// Subscriptions / Tiers
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub enum SubscriptionTier {
+    Free,
+    Pro,
+    Enterprise,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct Subscription {
+    pub principal_id: String,
+    pub tier: SubscriptionTier,
+    pub started_at: u64,
+    pub expires_at: u64,
+    pub auto_renew: bool,
+}

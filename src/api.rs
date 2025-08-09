@@ -3,6 +3,8 @@ use candid::Principal;
 use ic_cdk::api::caller;
 use crate::domain::*;
 use crate::services::{EstimationService, EscrowService, SettlementService, BalanceService};
+use crate::services as svc;
+use ic_cdk::api::time;
 use crate::infra::{Guards, Metrics};
 
 #[query]
@@ -49,6 +51,58 @@ fn policy() -> FeePolicy {
 fn update_policy(new_policy: FeePolicy) -> Result<(), String> {
     Guards::require_admin()?;
     BalanceService::update_fee_policy(new_policy)
+}
+
+// Admin role APIs
+#[query]
+fn is_admin() -> bool {
+    let pid = caller().to_text();
+    svc::is_admin(&pid)
+}
+
+#[query]
+fn list_admins() -> Vec<String> {
+    svc::list_admins()
+}
+
+#[update]
+fn add_admin(principal_text: String) -> Result<(), String> {
+    Guards::require_admin()?;
+    svc::add_admin(principal_text);
+    Ok(())
+}
+
+#[update]
+fn remove_admin(principal_text: String) -> Result<(), String> {
+    Guards::require_admin()?;
+    svc::remove_admin(principal_text);
+    Ok(())
+}
+
+// Subscriptions API
+#[update]
+fn set_subscription(tier: SubscriptionTier, duration_days: u32, auto_renew: bool) -> Result<(), String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    let now = time();
+    let expires = now + (duration_days as u64) * 24 * 60 * 60 * 1_000_000_000;
+    svc::with_state_mut(|state| {
+        state.subscriptions.insert(pid.clone(), Subscription {
+            principal_id: pid,
+            tier,
+            started_at: now,
+            expires_at: expires,
+            auto_renew,
+        });
+        state.metrics.last_activity = now;
+    });
+    Ok(())
+}
+
+#[query]
+fn get_subscription(principal: Option<String>) -> Option<Subscription> {
+    let pid = principal.unwrap_or_else(|| caller().to_text());
+    svc::with_state(|state| state.subscriptions.get(&pid).cloned())
 }
 
 #[query]
