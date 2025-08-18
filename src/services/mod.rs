@@ -9,11 +9,15 @@ pub mod estimation;
 pub mod escrow;
 pub mod settlement;
 pub mod balance;
+pub mod subscription;
+pub mod payment;
 
 pub use estimation::EstimationService;
 pub use escrow::EscrowService;
 pub use settlement::SettlementService;
 pub use balance::BalanceService;
+pub use subscription::SubscriptionService;
+pub use payment::PaymentService;
 
 thread_local! {
     static STATE: RefCell<EconState> = RefCell::new(EconState::default());
@@ -35,6 +39,8 @@ pub struct EconState {
     pub state_version: u32,
     // Subscription map
     pub subscriptions: HashMap<String, Subscription>,
+    // Payment transactions
+    pub payment_transactions: Option<HashMap<String, payment::PaymentTransaction>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, CandidType)]

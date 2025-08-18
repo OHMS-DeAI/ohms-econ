@@ -21,6 +21,11 @@ thiserror = "1.0"
 log = "0.4"
 getrandom = { version = "0.2", features = ["custom"] }
 
+# ICP payment processing dependencies
+icp-ledger-types = "0.18"
+ic-ledger-types = "0.18"
+dfn_candid = "0.15"
+
 # OHMS dependencies (only for non-wasm targets to avoid pulling heavy native deps in canisters)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ohms-adaptq = { path = "../ohms-adaptq" }

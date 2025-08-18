@@ -2,8 +2,9 @@ use ic_cdk_macros::*;
 use candid::Principal;
 use ic_cdk::api::caller;
 use crate::domain::*;
-use crate::services::{EstimationService, EscrowService, SettlementService, BalanceService};
+use crate::services::{EstimationService, EscrowService, SettlementService, BalanceService, SubscriptionService, PaymentService};
 use crate::services as svc;
+use crate::services::{subscription, payment};
 use ic_cdk::api::time;
 use crate::infra::{Guards, Metrics};
 
@@ -79,30 +80,85 @@ fn remove_admin(principal_text: String) -> Result<(), String> {
     Ok(())
 }
 
-// Subscriptions API
+// Subscription API
 #[update]
-fn set_subscription(tier: SubscriptionTier, duration_days: u32, auto_renew: bool) -> Result<(), String> {
+async fn create_subscription(tier_name: String, auto_renew: bool) -> Result<subscription::UserSubscription, String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
-    let now = time();
-    let expires = now + (duration_days as u64) * 24 * 60 * 60 * 1_000_000_000;
-    svc::with_state_mut(|state| {
-        state.subscriptions.insert(pid.clone(), Subscription {
-            principal_id: pid,
-            tier,
-            started_at: now,
-            expires_at: expires,
-            auto_renew,
-        });
-        state.metrics.last_activity = now;
-    });
-    Ok(())
+    SubscriptionService::create_subscription(pid, tier_name, auto_renew).await
 }
 
 #[query]
-fn get_subscription(principal: Option<String>) -> Option<Subscription> {
+fn get_user_subscription(principal: Option<String>) -> Option<subscription::UserSubscription> {
     let pid = principal.unwrap_or_else(|| caller().to_text());
-    svc::with_state(|state| state.subscriptions.get(&pid).cloned())
+    SubscriptionService::get_user_subscription(&pid)
+}
+
+#[update]
+async fn get_or_create_free_subscription() -> Result<subscription::UserSubscription, String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::get_or_create_free_subscription(pid).await
+}
+
+#[update]
+async fn update_payment_status(status: subscription::PaymentStatus) -> Result<(), String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::update_payment_status(pid, status).await
+}
+
+#[update]
+async fn validate_agent_creation_quota() -> Result<subscription::QuotaValidation, String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::validate_agent_creation_quota(&pid).await
+}
+
+#[update]
+async fn validate_token_usage_quota(tokens_requested: u64) -> Result<subscription::QuotaValidation, String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::validate_token_usage_quota(&pid, tokens_requested).await
+}
+
+#[query]
+fn get_user_usage(principal: Option<String>) -> Option<subscription::UsageMetrics> {
+    let pid = principal.unwrap_or_else(|| caller().to_text());
+    SubscriptionService::get_user_usage(&pid)
+}
+
+#[update]
+async fn cancel_subscription() -> Result<(), String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::cancel_subscription(pid).await
+}
+
+#[update]
+async fn renew_subscription() -> Result<(), String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::renew_subscription(pid).await
+}
+
+// Admin subscription APIs
+#[query]
+fn get_subscription_tiers() -> std::collections::HashMap<String, subscription::TierConfig> {
+    Guards::require_admin()?;
+    SubscriptionService::get_tier_configs()
+}
+
+#[query]
+fn list_all_subscriptions() -> Vec<subscription::UserSubscription> {
+    Guards::require_admin()?;
+    SubscriptionService::list_all_subscriptions()
+}
+
+#[query]
+fn get_subscription_stats() -> subscription::SubscriptionStats {
+    Guards::require_admin()?;
+    SubscriptionService::get_subscription_stats()
 }
 
 #[query]
@@ -148,4 +204,71 @@ fn withdraw(amount: u64) -> Result<(), String> {
     Guards::require_caller_authenticated()?;
     Guards::validate_amount(amount)?;
     BalanceService::withdraw(caller().to_text(), amount)
+}
+
+// Payment API
+#[update]
+async fn create_payment_request(subscription_tier: String) -> Result<payment::PaymentRequest, String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    PaymentService::create_payment_request(pid, subscription_tier).await
+}
+
+#[update]
+async fn process_subscription_payment(payment_request: payment::PaymentRequest) -> Result<payment::PaymentTransaction, String> {
+    Guards::require_caller_authenticated()?;
+    let from_principal = caller();
+    PaymentService::process_icp_payment(payment_request, from_principal).await
+}
+
+#[update]
+async fn verify_payment(transaction_id: String) -> Result<payment::PaymentVerification, String> {
+    Guards::require_caller_authenticated()?;
+    PaymentService::verify_payment(transaction_id).await
+}
+
+#[query]
+fn get_payment_transaction(transaction_id: String) -> Option<payment::PaymentTransaction> {
+    Guards::require_caller_authenticated()?;
+    PaymentService::get_payment_transaction(transaction_id)
+}
+
+#[query]
+fn list_user_payment_transactions(limit: Option<u32>) -> Vec<payment::PaymentTransaction> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    let max_limit = limit.unwrap_or(10).min(50);
+    PaymentService::list_user_transactions(pid, max_limit)
+}
+
+#[query]
+fn get_icp_usd_rate() -> Result<f64, String> {
+    PaymentService::get_icp_usd_rate()
+}
+
+#[update]
+async fn convert_usd_to_icp_e8s(amount_usd: u32) -> Result<u64, String> {
+    PaymentService::usd_to_icp_e8s(amount_usd)
+}
+
+// Admin payment APIs
+#[query]
+fn get_payment_stats() -> payment::PaymentStats {
+    Guards::require_admin()?;
+    PaymentService::get_payment_stats()
+}
+
+#[query]
+fn list_all_payment_transactions(limit: Option<u32>) -> Vec<payment::PaymentTransaction> {
+    Guards::require_admin()?;
+    let max_limit = limit.unwrap_or(50).min(200);
+    svc::with_state(|state| {
+        state.payment_transactions.as_ref()
+            .map(|txs| {
+                let mut transactions: Vec<payment::PaymentTransaction> = txs.values().cloned().collect();
+                transactions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                transactions.into_iter().take(max_limit as usize).collect()
+            })
+            .unwrap_or_default()
+    })
 }
