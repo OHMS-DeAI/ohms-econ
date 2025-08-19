@@ -7,10 +7,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.15"
-ic-cdk-macros = "0.15"
-candid = "0.10"
-serde = { version = "1.0", features = ["derive"] }
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
 serde_json = "1.0"
 serde_cbor = "0.11"
 sha2 = "0.10"
@@ -21,10 +21,9 @@ thiserror = "1.0"
 log = "0.4"
 getrandom = { version = "0.2", features = ["custom"] }
 
-# ICP payment processing dependencies
-icp-ledger-types = "0.18"
-ic-ledger-types = "0.18"
-dfn_candid = "0.15"
+# ICP payment processing dependencies removed for now due to version conflicts
+# ic-ledger-types would require ic-cdk 0.18+ but workspace uses 0.15
+# dfn_candid removed - not available on crates.io, functionality covered by candid crate
 
 # OHMS dependencies (only for non-wasm targets to avoid pulling heavy native deps in canisters)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
