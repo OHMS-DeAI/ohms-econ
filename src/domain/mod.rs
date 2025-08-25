@@ -146,8 +146,60 @@ pub enum SubscriptionTier {
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct Subscription {
     pub principal_id: String,
-    pub tier: SubscriptionTier,
+    pub tier: TierConfig,
     pub started_at: u64,
     pub expires_at: u64,
     pub auto_renew: bool,
+    pub current_usage: UsageMetrics,
+    pub payment_status: PaymentStatus,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct UsageMetrics {
+    pub agents_created_this_month: u32,
+    pub tokens_used_this_month: u64,
+    pub inferences_this_month: u32,
+    pub last_reset_date: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType, PartialEq)]
+pub enum PaymentStatus {
+    Active,
+    Pending,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct TierConfig {
+    pub name: String,
+    pub monthly_fee_usd: u32,
+    pub max_agents: u32,
+    pub monthly_agent_creations: u32,
+    pub token_limit: u64,
+    pub inference_rate: InferenceRate,
+    pub features: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub enum InferenceRate {
+    Standard,
+    Priority,
+    Premium,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct QuotaValidation {
+    pub allowed: bool,
+    pub reason: Option<String>,
+    pub remaining_quota: Option<QuotaRemaining>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct QuotaRemaining {
+    pub agents_remaining: u32,
+    pub tokens_remaining: u64,
+    pub inferences_remaining: u32,
 }

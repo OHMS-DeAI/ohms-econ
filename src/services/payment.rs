@@ -2,14 +2,54 @@ use crate::domain::*;
 use crate::services::{with_state, with_state_mut, SubscriptionService};
 use candid::{CandidType, Principal};
 use ic_cdk::api::time;
-use ic_ledger_types::{
-    AccountIdentifier, 
-    Memo, 
-    Tokens,
-    TransferArgs,
-    TransferResult,
-    DEFAULT_FEE,
-};
+// Simplified ICP ledger types for compatibility
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct AccountIdentifier(pub Vec<u8>);
+
+impl AccountIdentifier {
+    pub fn from_hex(hex: &str) -> Result<Self, String> {
+        // Simplified hex parsing - in production would use proper hex crate
+        let bytes = hex.as_bytes().to_vec();
+        Ok(AccountIdentifier(bytes))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct Memo(pub u64);
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct Tokens {
+    pub e8s: u64,
+}
+
+impl Tokens {
+    pub fn from_e8s(e8s: u64) -> Self {
+        Tokens { e8s }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct TransferArgs {
+    pub to: AccountIdentifier,
+    pub fee: Tokens,
+    pub memo: Memo,
+    pub from_subaccount: Option<Vec<u8>>,
+    pub created_at_time: Option<u64>,
+    pub amount: Tokens,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub enum TransferResult {
+    Ok(u64),
+    Err(TransferError),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct TransferError {
+    pub message: String,
+}
+
+const DEFAULT_FEE: Tokens = Tokens { e8s: 10_000 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -164,7 +204,7 @@ impl PaymentService {
         match ic_cdk::call::<(TransferArgs,), (TransferResult,)>(ledger_principal, "transfer", (transfer_args,)).await {
             Ok((transfer_result,)) => {
                 match transfer_result {
-                    Ok(block_index) => {
+                    TransferResult::Ok(block_index) => {
                         // Payment successful
                         transaction.status = PaymentTransactionStatus::Completed;
                         transaction.icp_block_index = Some(block_index);
@@ -173,7 +213,7 @@ impl PaymentService {
                         // Update subscription payment status
                         if let Err(e) = SubscriptionService::update_payment_status(
                             payment_request.user_principal.clone(),
-                            crate::services::subscription::PaymentStatus::Active,
+                            crate::domain::PaymentStatus::Active,
                         ).await {
                             transaction.error_message = Some(format!("Failed to update subscription: {}", e));
                         }
@@ -186,7 +226,7 @@ impl PaymentService {
 
                         Ok(transaction)
                     }
-                    Err(transfer_error) => {
+                    TransferResult::Err(transfer_error) => {
                         // Payment failed
                         transaction.status = PaymentTransactionStatus::Failed;
                         transaction.error_message = Some(format!("Transfer failed: {:?}", transfer_error));

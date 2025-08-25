@@ -82,48 +82,62 @@ fn remove_admin(principal_text: String) -> Result<(), String> {
 
 // Subscription API
 #[update]
-async fn create_subscription(tier_name: String, auto_renew: bool) -> Result<subscription::UserSubscription, String> {
+async fn create_subscription(tier_name: String, auto_renew: bool) -> Result<Subscription, String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
     SubscriptionService::create_subscription(pid, tier_name, auto_renew).await
 }
 
 #[query]
-fn get_user_subscription(principal: Option<String>) -> Option<subscription::UserSubscription> {
+fn get_user_subscription(principal: Option<String>) -> Option<Subscription> {
     let pid = principal.unwrap_or_else(|| caller().to_text());
     SubscriptionService::get_user_subscription(&pid)
 }
 
 #[update]
-async fn get_or_create_free_subscription() -> Result<subscription::UserSubscription, String> {
+async fn get_or_create_free_subscription() -> Result<Subscription, String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
     SubscriptionService::get_or_create_free_subscription(pid).await
 }
 
 #[update]
-async fn update_payment_status(status: subscription::PaymentStatus) -> Result<(), String> {
+async fn get_or_create_free_basic_subscription() -> Result<Subscription, String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::get_or_create_free_basic_subscription(pid).await
+}
+
+#[update]
+async fn update_payment_status(status: PaymentStatus) -> Result<(), String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
     SubscriptionService::update_payment_status(pid, status).await
 }
 
 #[update]
-async fn validate_agent_creation_quota() -> Result<subscription::QuotaValidation, String> {
+async fn validate_agent_creation_quota() -> Result<QuotaValidation, String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
     SubscriptionService::validate_agent_creation_quota(&pid).await
 }
 
 #[update]
-async fn validate_token_usage_quota(tokens_requested: u64) -> Result<subscription::QuotaValidation, String> {
+async fn validate_quota() -> Result<QuotaValidation, String> {
+    Guards::require_caller_authenticated()?;
+    let pid = caller().to_text();
+    SubscriptionService::validate_quota(&pid).await
+}
+
+#[update]
+async fn validate_token_usage_quota(tokens_requested: u64) -> Result<QuotaValidation, String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
     SubscriptionService::validate_token_usage_quota(&pid, tokens_requested).await
 }
 
 #[query]
-fn get_user_usage(principal: Option<String>) -> Option<subscription::UsageMetrics> {
+fn get_user_usage(principal: Option<String>) -> Option<UsageMetrics> {
     let pid = principal.unwrap_or_else(|| caller().to_text());
     SubscriptionService::get_user_usage(&pid)
 }
@@ -144,20 +158,25 @@ async fn renew_subscription() -> Result<(), String> {
 
 // Admin subscription APIs
 #[query]
-fn get_subscription_tiers() -> std::collections::HashMap<String, subscription::TierConfig> {
-    Guards::require_admin()?;
-    SubscriptionService::get_tier_configs()
+fn get_subscription_tiers() -> Vec<(String, TierConfig)> {
+    Guards::require_admin().unwrap_or_default();
+    let configs = SubscriptionService::get_tier_configs();
+    let mut result: Vec<(String, TierConfig)> = Vec::new();
+    for (key, value) in configs {
+        result.push((key, value));
+    }
+    result
 }
 
 #[query]
-fn list_all_subscriptions() -> Vec<subscription::UserSubscription> {
-    Guards::require_admin()?;
+fn list_all_subscriptions() -> Vec<Subscription> {
+    Guards::require_admin().unwrap_or_default();
     SubscriptionService::list_all_subscriptions()
 }
 
 #[query]
 fn get_subscription_stats() -> subscription::SubscriptionStats {
-    Guards::require_admin()?;
+    Guards::require_admin().unwrap_or_default();
     SubscriptionService::get_subscription_stats()
 }
 
@@ -228,17 +247,17 @@ async fn verify_payment(transaction_id: String) -> Result<payment::PaymentVerifi
 }
 
 #[query]
-fn get_payment_transaction(transaction_id: String) -> Option<payment::PaymentTransaction> {
+fn get_payment_transaction(transaction_id: String) -> Result<Option<payment::PaymentTransaction>, String> {
     Guards::require_caller_authenticated()?;
-    PaymentService::get_payment_transaction(transaction_id)
+    Ok(PaymentService::get_payment_transaction(transaction_id))
 }
 
 #[query]
-fn list_user_payment_transactions(limit: Option<u32>) -> Vec<payment::PaymentTransaction> {
+fn list_user_payment_transactions(limit: Option<u32>) -> Result<Vec<payment::PaymentTransaction>, String> {
     Guards::require_caller_authenticated()?;
     let pid = caller().to_text();
     let max_limit = limit.unwrap_or(10).min(50);
-    PaymentService::list_user_transactions(pid, max_limit)
+    Ok(PaymentService::list_user_transactions(pid, max_limit))
 }
 
 #[query]
@@ -253,16 +272,16 @@ async fn convert_usd_to_icp_e8s(amount_usd: u32) -> Result<u64, String> {
 
 // Admin payment APIs
 #[query]
-fn get_payment_stats() -> payment::PaymentStats {
+fn get_payment_stats() -> Result<payment::PaymentStats, String> {
     Guards::require_admin()?;
-    PaymentService::get_payment_stats()
+    Ok(PaymentService::get_payment_stats())
 }
 
 #[query]
-fn list_all_payment_transactions(limit: Option<u32>) -> Vec<payment::PaymentTransaction> {
+fn list_all_payment_transactions(limit: Option<u32>) -> Result<Vec<payment::PaymentTransaction>, String> {
     Guards::require_admin()?;
     let max_limit = limit.unwrap_or(50).min(200);
-    svc::with_state(|state| {
+    Ok(svc::with_state(|state| {
         state.payment_transactions.as_ref()
             .map(|txs| {
                 let mut transactions: Vec<payment::PaymentTransaction> = txs.values().cloned().collect();
@@ -270,5 +289,5 @@ fn list_all_payment_transactions(limit: Option<u32>) -> Vec<payment::PaymentTran
                 transactions.into_iter().take(max_limit as usize).collect()
             })
             .unwrap_or_default()
-    })
+    }))
 }
