@@ -95,10 +95,9 @@ fn get_user_subscription(principal: Option<String>) -> Option<Subscription> {
 }
 
 #[update]
-async fn get_or_create_free_subscription() -> Result<Subscription, String> {
+async fn get_or_create_free_subscription(user_principal: String) -> Result<Subscription, String> {
     Guards::require_caller_authenticated()?;
-    let pid = caller().to_text();
-    SubscriptionService::get_or_create_free_subscription(pid).await
+    SubscriptionService::get_or_create_free_subscription(user_principal).await
 }
 
 #[update]
@@ -116,10 +115,9 @@ async fn update_payment_status(status: PaymentStatus) -> Result<(), String> {
 }
 
 #[update]
-async fn validate_agent_creation_quota() -> Result<QuotaValidation, String> {
+async fn validate_agent_creation_quota(user_principal: String) -> Result<QuotaValidation, String> {
     Guards::require_caller_authenticated()?;
-    let pid = caller().to_text();
-    SubscriptionService::validate_agent_creation_quota(&pid).await
+    SubscriptionService::validate_agent_creation_quota(&user_principal).await
 }
 
 #[update]
@@ -130,10 +128,9 @@ async fn validate_quota() -> Result<QuotaValidation, String> {
 }
 
 #[update]
-async fn validate_token_usage_quota(tokens_requested: u64) -> Result<QuotaValidation, String> {
+async fn validate_token_usage_quota(user_principal: String, tokens_requested: u64) -> Result<QuotaValidation, String> {
     Guards::require_caller_authenticated()?;
-    let pid = caller().to_text();
-    SubscriptionService::validate_token_usage_quota(&pid, tokens_requested).await
+    SubscriptionService::validate_token_usage_quota(&user_principal, tokens_requested).await
 }
 
 #[query]

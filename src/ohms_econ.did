@@ -234,10 +234,10 @@ service : {
   // Subscription APIs
   create_subscription : (text, bool) -> (Result_UserSubscription);
   get_user_subscription : (opt text) -> (opt UserSubscription) query;
-  get_or_create_free_subscription : () -> (Result_UserSubscription);
+  get_or_create_free_subscription : (text) -> (Result_UserSubscription);
   update_payment_status : (PaymentStatus) -> (Result_6);
-  validate_agent_creation_quota : () -> (Result_QuotaValidation);
-  validate_token_usage_quota : (nat64) -> (Result_QuotaValidation);
+  validate_agent_creation_quota : (text) -> (Result_QuotaValidation);
+  validate_token_usage_quota : (text, nat64) -> (Result_QuotaValidation);
   get_user_usage : (opt text) -> (opt UsageMetrics) query;
   cancel_subscription : () -> (Result_6);
   renew_subscription : () -> (Result_6);
