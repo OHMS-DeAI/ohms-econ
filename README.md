@@ -1,12 +1,12 @@
 # OHMS Economics Engine - Subscription & Billing Management
 
-[![OHMS 2.0](https://img.shields.io/badge/OHMS-2.0-blue.svg)](https://github.com/ohms-2-0)
+[![OHMS 2.0](https://img.shields.io/badge/OHMS-2.0-blue.svg)](https://github.com/OHMS-DeAI)
 [![Internet Computer](https://img.shields.io/badge/Internet_Computer-ICP-blue.svg)](https://internetcomputer.org/)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://rust-lang.org/)
 
-**Canister ID:** `tetse-piaaa-aaaao-qkeyq-cai`
-**Network:** Internet Computer Mainnet
-**Direct URL:** https://tetse-piaaa-aaaao-qkeyq-cai.icp0.io/
+**Canister ID:** `tetse-piaaa-aaaao-qkeyq-cai`\
+**Network:** Internet Computer Mainnet\
+**Direct URL:** https://tetse-piaaa-aaaao-qkeyq-cai.icp0.io/\
 **Candid UI:** https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=tetse-piaaa-aaaao-qkeyq-cai
 
 The OHMS Economics Engine is the financial backbone of the OHMS 2.0 platform, managing subscription tiers, billing cycles, usage quotas, and economic settlements. This canister handles all financial transactions, ensures fair resource allocation, and provides transparent economic governance for the autonomous agent ecosystem.
@@ -554,7 +554,7 @@ dfx canister --network local call ohms_econ process_payment '(
 
 ### Community
 - [OHMS Discord](https://discord.gg/ohms)
-- [GitHub Repository](https://github.com/ohms-2-0/ohms-econ)
+- [GitHub Repository](https://github.com/OHMS-DeAI/ohms-econ)
 - [ICP Community Forum](https://forum.dfinity.org/)
 
 ---
